@@ -31,6 +31,8 @@ const BOX_COLOR_TYPE_COUNT = 5;
 
 type Colors = "blue" | "red" | "green" | "yellow" | "purpure";
 
+export let colorMap = [];
+
 export type GameBoardTitle = [Node, UITransform, coords: [number, number], index: [number, number], colorIndex: number, isActive: boolean];
 export type GameBoard = Array<Array<GameBoardTitle>>;
 @ccclass("Game")
@@ -73,23 +75,23 @@ export class Game extends Component {
     });
   }
 
-  protected onEnable(): void { }
+  protected onEnable(): void {}
 
-  protected start(): void { }
+  protected start(): void {}
 
-  protected update(deltaTime: number): void { }
+  protected update(deltaTime: number): void {}
 
-  protected onDisable(): void { }
+  protected onDisable(): void {}
 
-  protected onDestroy(): void { }
+  protected onDestroy(): void {}
 
   public shuffleGameBoard() {
-    for (let i = this.gameBoard.length - 1; i > 0; i--) {
-      for (let j = this.gameBoard[0].length - 1; j > 0; j--) {
+    for (let i = this.gameBoard.length - 1; i >= 0; i--) {
+      for (let j = this.gameBoard[0].length - 1; j >= 0; j--) {
         let k = i - 1;
         if (!this.gameBoard[i][j][5]) {
           while (true) {
-            if (this.gameBoard[k][j][5]) {
+            if (this.gameBoard[k] && this.gameBoard[k][j][5]) {
               let oldBox = this.gameBoard[i][j];
               let newBox = this.gameBoard[k][j];
               this.gameBoard[i][j] = null;
@@ -100,9 +102,14 @@ export class Game extends Component {
 
               this.gameBoard[i][j][0].setPosition(oldBox[2][0], oldBox[2][1]);
               this.gameBoard[i][j][0].getComponent(Box).setIndex2DMatrix([oldBox[3][0], oldBox[3][1]]);
+              this.gameBoard[i][j][0].on(
+                Input.EventType.MOUSE_UP,
+                this.gameBoard[i][j][0].getComponent(Box).onMouseUp,
+                this.gameBoard[i][j][0].getComponent(Box),
+              );
+
               this.gameBoard[i][j][2] = [...oldBox[2]];
               this.gameBoard[i][j][3] = [...oldBox[3]];
-              this.gameBoard[i][j][4] = oldBox[4];
               this.gameBoard[i][j][5] = true;
               break;
             }
@@ -138,6 +145,7 @@ export class Game extends Component {
 
     Promise.all([loadBlue, loadRed, loadGreen, loadYellow, loadPurpure]).then((sprites) => {
       this.boxSpriteFrames = sprites;
+      colorMap = ["blue", "red", "green", "yellow", "purpure"];
       callback();
     });
   }

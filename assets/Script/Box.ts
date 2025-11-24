@@ -21,7 +21,7 @@ import {
   instantiate,
   Color,
 } from "cc";
-import { Game, type GameBoard, type GameBoardTitle } from "./Game";
+import { Game, type GameBoard, type GameBoardTitle, colorMap } from "./Game";
 
 const { ccclass, property } = _decorator;
 
@@ -74,11 +74,12 @@ export class Box extends Component {
     this.originIndex = originIndex;
   }
 
-  private onMouseUp() {
+  public onMouseUp() {
     console.log("MouseUp box");
     console.log("Position: " + this.node.position);
     console.log("Id: " + this.node.uuid);
     console.log("Origin Index: " + this.originIndex);
+    console.log("Color: " + colorMap[this.gameBoard[this.originIndex[0]][this.originIndex[1]][4]]);
 
     const startIndex = this.gameBoard.length > this.gameBoardSize ? this.gameBoard.length - this.gameBoardSize : 0;
 
@@ -89,7 +90,6 @@ export class Box extends Component {
     }); // Создание упрощенной копии массива с границами текущего поля
 
     const destroyedTitle = getSiblingTitle(copyBoard, getNormalizedIndex(this.originIndex, this.gameBoardSize));
-
     if (destroyedTitle === null) {
       console.log("Нет соседей");
       return;
@@ -106,6 +106,7 @@ export class Box extends Component {
     }
 
     director.getScene().getChildByName("Canvas").getComponent(Game).shuffleGameBoard();
+    this.gameBoard = director.getScene().getChildByName("Canvas").getComponent(Game).gameBoard;
   }
 
   private onMouseDown() {
