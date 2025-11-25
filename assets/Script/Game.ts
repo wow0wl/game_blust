@@ -1,24 +1,4 @@
-import {
-  _decorator,
-  Component,
-  Node,
-  input,
-  find,
-  Input,
-  EventMouse,
-  EventTouch,
-  director,
-  instantiate,
-  SpriteFrame,
-  resources,
-  Prefab,
-  assetManager,
-  Layout,
-  Camera,
-  Sprite,
-  Size,
-  UITransform,
-} from "cc";
+import { _decorator, Component, Node, Input, instantiate, SpriteFrame, resources, Prefab, Layout, Camera, Sprite, UITransform } from "cc";
 import { Box } from "./Box";
 
 const { ccclass, property } = _decorator;
@@ -29,11 +9,9 @@ const MAX_BOX_GAP = 10;
 const MIN_BOX_GAP = 1;
 const BOX_COLOR_TYPE_COUNT = 5;
 
-type Colors = "blue" | "red" | "green" | "yellow" | "purpure";
-
 export let colorMap = [];
 
-export type GameBoardTitle = [Node, UITransform, coords: [number, number], index: [number, number], colorIndex: number, isActive: boolean];
+export type GameBoardTitle = [Node, coords: [number, number], index: [number, number], colorIndex: number, isActive: boolean];
 export type GameBoard = Array<Array<GameBoardTitle>>;
 @ccclass("Game")
 export class Game extends Component {
@@ -66,8 +44,8 @@ export class Game extends Component {
       this.initGameField(this.BoxesLayout);
       for (let i = 0; i < this.gameBoard.length; i++) {
         for (let j = 0; j < this.gameBoard[0].length; j++) {
-          // const nodeComponent = this.gameBoard[i][j][0].getComponent(Box)
-          // nodeComponent.boxAnimation.play('scaleAnimation')
+          const nodeComponent = this.gameBoard[i][j][0].getComponent(Box);
+          nodeComponent.boxAnimation.play("scaleAnimation");
           // this.gameBoard[i][j][0].on(Node.EventType.NODE_DESTROYED, () => {
           // })
         }
@@ -89,28 +67,28 @@ export class Game extends Component {
     for (let i = this.gameBoard.length - 1; i >= 0; i--) {
       for (let j = this.gameBoard[0].length - 1; j >= 0; j--) {
         let k = i - 1;
-        if (!this.gameBoard[i][j][5]) {
+        if (!this.gameBoard[i][j][4]) {
           while (true) {
-            if (this.gameBoard[k] && this.gameBoard[k][j][5]) {
+            if (this.gameBoard[k] && this.gameBoard[k][j][4]) {
               let oldBox = this.gameBoard[i][j];
               let newBox = this.gameBoard[k][j];
               this.gameBoard[i][j] = null;
 
               this.gameBoard[i][j] = [...newBox];
 
-              this.gameBoard[k][j][5] = false;
+              this.gameBoard[k][j][4] = false;
 
-              this.gameBoard[i][j][0].setPosition(oldBox[2][0], oldBox[2][1]);
-              this.gameBoard[i][j][0].getComponent(Box).setIndex2DMatrix([oldBox[3][0], oldBox[3][1]]);
+              this.gameBoard[i][j][0].setPosition(oldBox[1][0], oldBox[1][1]);
+              this.gameBoard[i][j][0].getComponent(Box).setIndex2DMatrix([oldBox[2][0], oldBox[2][1]]);
               this.gameBoard[i][j][0].on(
                 Input.EventType.MOUSE_UP,
                 this.gameBoard[i][j][0].getComponent(Box).onMouseUp,
                 this.gameBoard[i][j][0].getComponent(Box),
               );
 
+              this.gameBoard[i][j][1] = [...oldBox[1]];
               this.gameBoard[i][j][2] = [...oldBox[2]];
-              this.gameBoard[i][j][3] = [...oldBox[3]];
-              this.gameBoard[i][j][5] = true;
+              this.gameBoard[i][j][4] = true;
               break;
             }
             k--;
@@ -180,7 +158,7 @@ export class Game extends Component {
         nodeComponent.setContentSize(cellSize, cellSize);
         nodeComponent.setIndex2DMatrix([i, j]);
 
-        this.gameBoard[i].push([node, nodeComponent.uiTransport, [node.position.x, node.position.y], [i, j], colorIndex, true]);
+        this.gameBoard[i].push([node, [node.position.x, node.position.y], [i, j], colorIndex, true]);
         layout.node.addChild(node);
       }
       if (k < this.GameBoardSize) {

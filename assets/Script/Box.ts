@@ -1,32 +1,9 @@
-import {
-  _decorator,
-  Component,
-  Node,
-  Size,
-  Sprite,
-  SpriteFrame,
-  UITransform,
-  Input,
-  find,
-  director,
-  Animation,
-  AnimationClip,
-  animation,
-  Vec2,
-  Vec3,
-  RealCurve,
-  js,
-  isValid,
-  Label,
-  instantiate,
-  Color,
-} from "cc";
-import { Game, type GameBoard, type GameBoardTitle, colorMap } from "./Game";
+import { _decorator, Component, Sprite, SpriteFrame, UITransform, Input, director, Animation, animation, Vec2 } from "cc";
+import { Game, type GameBoard, colorMap } from "./Game";
+
+import { BoxAnimation } from "./BoxAnimation";
 
 const { ccclass, property } = _decorator;
-
-type Colors = "blue" | "red" | "green" | "yellow" | "perple";
-type ColorsId = 1 | 2 | 3 | 4 | 5;
 
 type Position = [number, number];
 
@@ -53,9 +30,16 @@ export class Box extends Component {
     this.uiTransport = this.node.getComponent(UITransform);
     this.gameBoard = director.getScene().getChildByName("Canvas").getComponent(Game).gameBoard;
     this.gameBoardSize = this.gameBoard[0].length;
-    this.boxAnimation = this.defineAnimation();
 
-    const boxInBoard = this.getBoxFromBoard(this.originIndex[0], this.originIndex[1]);
+    const boxAnimation = this.node.getComponent(BoxAnimation);
+    const { clip, track } = boxAnimation.createBaseAnimation("scaleAnimation", animation.VectorTrack, {
+      duration: 1,
+      keys: [[0.0, 0.5, 1.0]],
+      wrapMode: 2,
+    });
+    const scaleClip = boxAnimation.createScaleAnimation(track, clip, [new Vec2(1.0, 1.0), new Vec2(1.05, 1.05), new Vec2(1.0, 1.0)]);
+    boxAnimation.addAnimationClip(scaleClip);
+    this.boxAnimation = boxAnimation.getAnimation();
   }
 
   update(deltaTime: number) {}
@@ -74,20 +58,27 @@ export class Box extends Component {
     this.originIndex = originIndex;
   }
 
+  public setPosition(x: number, y: number) {
+    this.node.setPosition(x, y);
+  }
+
   public onMouseUp() {
     console.log("MouseUp box");
     console.log("Position: " + this.node.position);
     console.log("Id: " + this.node.uuid);
     console.log("Origin Index: " + this.originIndex);
-    console.log("Color: " + colorMap[this.gameBoard[this.originIndex[0]][this.originIndex[1]][4]]);
+    console.log("Color: " + colorMap[this.gameBoard[this.originIndex[0]][this.originIndex[1]][3]]);
 
     const startIndex = this.gameBoard.length > this.gameBoardSize ? this.gameBoard.length - this.gameBoardSize : 0;
 
+    /**
+     *Создание упрощенной копии массива с границами текущего поля
+     */
     const copyBoard = getCopyArrayByVerticalBoundary(this.gameBoard, startIndex, (item) => {
       if (item) {
-        return item[4];
+        return item[3];
       }
-    }); // Создание упрощенной копии массива с границами текущего поля
+    });
 
     const destroyedTitle = getSiblingTitle(copyBoard, getNormalizedIndex(this.originIndex, this.gameBoardSize));
     if (destroyedTitle === null) {
@@ -95,7 +86,9 @@ export class Box extends Component {
       return;
     }
 
-    // Поиск удаляемого тайтла по копии
+    /**
+     * Поиск удаляемого тайтла по копии
+     */
     for (let i = 0; i < destroyedTitle.length; i++) {
       for (let j = 0; j < destroyedTitle[i].length; j++) {
         if (copyBoard[i][j] === null) {
@@ -109,57 +102,10 @@ export class Box extends Component {
     this.gameBoard = director.getScene().getChildByName("Canvas").getComponent(Game).gameBoard;
   }
 
-  private onMouseDown() {
-    console.log("MouseUp box");
-    console.log("Position: " + this.node.position);
-    console.log("Size: " + this.node.getComponent(UITransform).contentSize);
-    console.log("Id: " + this.node.uuid);
-    console.log("Id: " + this.originIndex);
-  }
-
   private deleteNode([rIndex, cIndex]: Position) {
     this.gameBoard[rIndex][cIndex][0].destroy();
-    this.gameBoard[rIndex][cIndex][5] = false;
+    this.gameBoard[rIndex][cIndex][4] = false;
     // this.gameBoard[rIndex][cIndex] = null
-  }
-
-  private defineAnimation(): Animation {
-    const animationClip = new AnimationClip("scaleAnimation");
-    const track = new animation.VectorTrack();
-
-    animationClip.duration = 1.0;
-    animationClip.wrapMode = 2;
-    animationClip.keys = [[0.0, 0.5, 1.0]];
-
-    track.path = new animation.TrackPath().toProperty("scale");
-
-    const [x, y] = track.channels();
-
-    const vec2KeyFrames: [number, Vec2][] = [
-      [0.0, new Vec2(1.0, 1.0)],
-      [0.5, new Vec2(1.05, 1.05)],
-      [1.0, new Vec2(1.0, 1.0)],
-    ];
-
-    x.curve.assignSorted(vec2KeyFrames.map(([time, vec2]) => [time, { value: vec2.x }]));
-    y.curve.assignSorted(vec2KeyFrames.map(([time, vec2]) => [time, { value: vec2.y }]));
-    // x.curve.clear()
-    // y.curve.clear()
-
-    animationClip.addTrack(track);
-
-    let animationComponent = this.node.getComponent(Animation);
-
-    if (!animationComponent) {
-      animationComponent = this.node.addComponent(Animation);
-    }
-    animationComponent.addClip(animationClip, animationClip.name);
-    // animationComponent.defaultClip = animationClip
-    return animationComponent;
-  }
-
-  private getBoxFromBoard(i: number, j: number): GameBoardTitle {
-    return this.gameBoard[i][j];
   }
 }
 
@@ -221,6 +167,7 @@ function getCopyArrayByVerticalBoundary<T>(originBoard: Array<Array<T>>, startIn
 function getNormalizedIndex(index: Position, arrayBoundaryLength: number): Position {
   return index[0] >= arrayBoundaryLength ? [index[0] - arrayBoundaryLength, index[1]] : index;
 }
+
 function getDenormalizedIndex(index: Position, arrayBoundaryLength: number): Position {
   return index[0] <= arrayBoundaryLength ? [index[0] + arrayBoundaryLength, index[1]] : index;
 }
