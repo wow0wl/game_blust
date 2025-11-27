@@ -38,13 +38,13 @@ export class Game extends Component {
 
       const layoutBoundingBox = this.BoxesLayout.getComponent(UITransform).getBoundingBox();
       shadowBoxesLayoutNode.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y - layoutBoundingBox.height - this.BoxGap);
-
       this.initLayoutIndexes();
-      this.initGameField(shadowBoxesLayoutNode.getComponent(Layout));
+      // this.initGameField(shadowBoxesLayoutNode.getComponent(Layout));
       this.initGameField(this.BoxesLayout);
+      // this.BoxesLayout.node.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y + layoutBoundingBox.height + this.BoxGap)
       for (let i = 0; i < this.gameBoard.length; i++) {
         for (let j = 0; j < this.gameBoard[0].length; j++) {
-          this.gameBoard[i][j][0].getComponent(Box).boxAnimation.play("scaleAnimation");
+          // this.gameBoard[i][j][0].getComponent(Box).boxAnimation.play("scaleAnimation");
         }
       }
     });
@@ -141,14 +141,15 @@ export class Game extends Component {
 
     const startIndex = this.gameBoard.length ? this.gameBoard.length : 0;
 
-    for (let i = startIndex, k = 0; i < startIndex + this.GameBoardSize; i++) {
+    const zeroXPostion = layoutBoundingBox.x + cellSize * 0.5;
+    const zeroYPosition = layoutBoundingBox.y + cellSize * 0.5;
+    const gap = (layoutBoundingBox.width - this.GameBoardSize * cellSize) / (this.GameBoardSize - 1);
+
+    for (let i = startIndex, k = 0; i < startIndex + this.GameBoardSize * 2; i++) {
       this.gameBoard.push([]);
       for (let j = 0; j < this.GameBoardSize; j++) {
-        let zeroX = layoutBoundingBox.x + cellSize * 0.5;
-        let zeroY = layoutBoundingBox.y + cellSize * 0.5;
-        let gap = (layoutBoundingBox.width - this.GameBoardSize * cellSize) / (this.GameBoardSize - 1);
-        let x = zeroX + j * (cellSize + gap);
-        let y = zeroY + k * (cellSize + gap);
+        let x = zeroXPostion + j * (cellSize + gap);
+        let y = zeroYPosition + i * (cellSize + gap);
 
         const node = instantiate(this.Box);
         const nodeComponent = node.getComponent(Box);
@@ -159,13 +160,15 @@ export class Game extends Component {
         nodeComponent.setIndex2DMatrix([i, j]);
 
         this.gameBoard[i].push([node, [node.position.x, node.position.y], [i, j], colorIndex, true]);
-        layout.node.addChild(node);
+        setTimeout(() => {
+          layout.node.addChild(node);
+        }, 500 * i)
       }
-      if (k < this.GameBoardSize) {
-        k++;
-      } else {
-        k = 0;
-      }
+      // if (k < this.GameBoardSize) {
+      //   k++;
+      // } else {
+      //   k = 0;
+      // }
     }
   }
 
