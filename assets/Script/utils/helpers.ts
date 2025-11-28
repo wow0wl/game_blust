@@ -1,88 +1,70 @@
-function init() {
-  let maxRow = 3;
-  let maxCol = 3;
 
-  const directions = {
-    top: [-1, 0],
-    bottom: [1, 0],
-    left: [0, -1],
-    right: [0, 1],
-  };
+export type IndexInMatrix = [number, number]
 
-  function generateBoard(n) {
-    let board = [];
+const DIRECTIONS = {
+  top: [-1, 0],
+  bottom: [1, 0],
+  left: [0, -1],
+  right: [0, 1],
+};
 
-    maxRow = n;
-    maxCol = n;
-    for (let i = 0; i < n; i++) {
-      board.push([]);
-      for (let j = 0; j < n; j++) {
-        let max = 5;
-        let min = 1;
-        let randomColor = Math.floor(Math.random() * (max - min + 1) + min);
-        board[i].push(randomColor);
-      }
-    }
-    return board;
+export function getSiblingItem<T>(board: Array<Array<T>>, index: IndexInMatrix): Array<Array<T>> | null {
+  const [rIndex, cIndex] = index;
+  const startedItem = board[rIndex][cIndex];
+  const siblings = getSiblingItemByPosition(board, index, startedItem);
+  if (!siblings.length) {
+    return null;
   }
-
-  function removeSimilarTitle(board, position) {
-    const [rIndex, cIndex] = position;
-    getSiblingTitle(board, [rIndex, cIndex]);
+  while (siblings.length) {
+    const [rIndex, cIndex] = siblings.shift();
+    markItem(board, [rIndex, cIndex]); // new line
+    const newSiblings = getSiblingItemByPosition(board, [rIndex, cIndex], startedItem);
+    siblings.push(...newSiblings);
   }
+  return board;
+}
 
-  function getSiblingTitle(board, position) {
-    const [rIndex, cIndex] = position;
-    const startedTitle = board[rIndex][cIndex];
-    const siblings = getSiblingTitleByPosition(board, position, startedTitle);
+function getSiblingItemByPosition<T>(board: Array<Array<T>>, index: IndexInMatrix, targetItem: T): Array<IndexInMatrix> {
+  const siblings: Array<IndexInMatrix> = [];
+  const [rIndex, cIndex] = index;
 
-    if (!siblings.length) {
-      return 0;
-    }
-    board[rIndex][cIndex] = null;
+  for (let direction in DIRECTIONS) {
+    const newRowIndex = rIndex + DIRECTIONS[direction][0];
+    const newColumnIndex = cIndex + DIRECTIONS[direction][1];
+    const siblingItem = isValidSibling(board, newRowIndex, newColumnIndex) ? board[newRowIndex][newColumnIndex] : null;
 
-    while (siblings.length) {
-      const [rIndex, cIndex] = siblings.shift();
-      let newSiblings = getSiblingTitleByPosition(board, [rIndex, cIndex], startedTitle);
-      siblings.push(...newSiblings);
+    if (siblingItem !== null && siblingItem === targetItem) {
+      siblings.push([newRowIndex, newColumnIndex]);
     }
   }
 
-  function getSiblingTitleByPosition(board, position, startedTitle) {
-    const siblings = [];
-    const [rIndex, cIndex] = position;
+  return siblings;
+}
 
-    for (let direction in directions) {
-      const newRowIndex = rIndex + directions[direction][0];
-      const newColumnIndex = cIndex + directions[direction][1];
-      const siblingTitle = isValidSibling(newRowIndex, newColumnIndex) ? board[newRowIndex][newColumnIndex] : null;
+function markItem(board: Array<Array<unknown>>, [rIndex, cIndex]: IndexInMatrix): void {
+  board[rIndex][cIndex] = null;
+}
 
-      if (siblingTitle !== null && siblingTitle === startedTitle) {
-        siblings.push([newRowIndex, newColumnIndex]);
-        markTitle(board, [newRowIndex, newColumnIndex]);
-      }
+function isValidSibling(board: Array<Array<unknown>>, row: number, col: number): boolean {
+  return row >= 0 && row < board.length && col >= 0 && col < board[0].length;
+}
+
+export function getCopyArrayByVerticalBoundary<T>(originBoard: Array<Array<T>>, startIndex: number, callback: (value: T) => any): Array<Array<number>> {
+  const result = [];
+  const arrLength = originBoard[0].length;
+  for (let i = 0; i < arrLength; i++) {
+    result.push([]);
+    for (let j = 0; j < arrLength; j++) {
+      result[i].push(callback(originBoard[i + startIndex][j]));
     }
-
-    return siblings;
   }
+  return result;
+}
 
-  function markTitle(board, position) {
-    board[position[0]][position[1]] = null;
-  }
+export function getNormalizedIndex(index: IndexInMatrix, arrayBoundaryLength: number): IndexInMatrix {
+  return index[0] >= arrayBoundaryLength ? [index[0] - arrayBoundaryLength, index[1]] : index;
+}
 
-  function isValidSibling(row, col) {
-    return row >= 0 && row < maxRow && col >= 0 && col < maxCol;
-  }
-
-  // const board = generateBoard(9)
-  const board = [
-    [1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0],
-    [1, 0, 0, 0, 0],
-    [1, 0, 0, 0, 0],
-    [1, 0, 0, 0, 0],
-  ];
-  removeSimilarTitle(board, [1, 1]);
-
-  console.log(board);
+export function getDenormalizedIndex(index: IndexInMatrix, arrayBoundaryLength: number): IndexInMatrix {
+  return index[0] <= arrayBoundaryLength ? [index[0] + arrayBoundaryLength, index[1]] : index;
 }

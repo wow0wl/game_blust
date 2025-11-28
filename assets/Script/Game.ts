@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Input, instantiate, SpriteFrame, resources, Prefab, Layout, Camera, Sprite, UITransform, Animation } from "cc";
+import { _decorator, Component, Node, Input, instantiate, SpriteFrame, resources, Prefab, Layout, Camera, Sprite, UITransform, Animation, Vec2 } from "cc";
 import { Box } from "./Box";
 
 const { ccclass, property } = _decorator;
@@ -9,20 +9,20 @@ const MAX_BOX_GAP = 10;
 const MIN_BOX_GAP = 1;
 const BOX_COLOR_TYPE_COUNT = 5;
 
+const BOARDS_GAP = 120;
+
 export let colorMap = [];
 
-export type GameBoardTitle = [Node, coords: [number, number], index: [number, number], colorIndex: number, isActive: boolean];
-export type GameBoard = Array<Array<GameBoardTitle>>;
+export type GameBoardTile = [Node, coords: [number, number], index: [number, number], colorIndex: number, isActive: boolean];
+export type GameBoard = Array<Array<GameBoardTile>>;
 @ccclass("Game")
 export class Game extends Component {
   @property({
     type: Number,
     max: MAX_GAME_BOARD_SIZE,
     min: MIN_GAME_BOARD_SIZE,
-  })
-  private GameBoardSize: number = MAX_GAME_BOARD_SIZE;
-  @property({ type: Number, max: MAX_BOX_GAP, min: MIN_BOX_GAP })
-  private BoxGap: number = MAX_BOX_GAP;
+  }) private gameBoardSize: number = MAX_GAME_BOARD_SIZE
+  @property({ type: Number, max: MAX_BOX_GAP, min: MIN_BOX_GAP }) private BoxGap: number = MAX_BOX_GAP;
   @property({ type: Prefab }) private Box: Prefab = null;
   @property({ type: Layout }) private BoxesLayout: Layout = null;
   @property({ type: Camera }) private Camera: Camera = null;
@@ -30,18 +30,19 @@ export class Game extends Component {
 
   private boxSpriteFrames: Array<SpriteFrame> = [];
   public gameBoard: GameBoard = [];
+  public gameBoardMap = new Map<[number, number], GameBoardTile>
+
 
   protected onLoad(): void {
     this.loadAssets(() => {
-      const shadowBoxesLayoutNode = instantiate(this.BoxesLayout.node);
-      this.BoxesLayout.node.parent.addChild(shadowBoxesLayoutNode);
-
       const layoutBoundingBox = this.BoxesLayout.getComponent(UITransform).getBoundingBox();
-      shadowBoxesLayoutNode.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y - layoutBoundingBox.height - this.BoxGap);
+
       this.initLayoutIndexes();
-      // this.initGameField(shadowBoxesLayoutNode.getComponent(Layout));
       this.initGameField(this.BoxesLayout);
-      // this.BoxesLayout.node.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y + layoutBoundingBox.height + this.BoxGap)
+      this.initGameField(this.BoxesLayout);
+
+      this.BoxesLayout.node.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y + layoutBoundingBox.height + this.BoxGap + BOARDS_GAP)
+
       for (let i = 0; i < this.gameBoard.length; i++) {
         for (let j = 0; j < this.gameBoard[0].length; j++) {
           // this.gameBoard[i][j][0].getComponent(Box).boxAnimation.play("scaleAnimation");
@@ -70,13 +71,13 @@ export class Game extends Component {
         if (!this.gameBoard[i][j][4]) {
           while (true) {
             if (this.gameBoard[k] && this.gameBoard[k][j][4]) {
-              let oldBox = this.gameBoard[i][j];
-              let newBox = this.gameBoard[k][j];
+              let oldBox = this.gameBoardMap.get([i, j]);
+              let newBox = this.gameBoardMap.get([k, j]);
               this.gameBoard[i][j] = null;
+              this.gameBoard[k][j] = null
 
               this.gameBoard[i][j] = [...newBox];
 
-              this.gameBoard[k][j][4] = false;
 
               this.gameBoard[i][j][0].getComponent(Box).setPosition(oldBox[1][0], oldBox[1][1]);
               this.gameBoard[i][j][0].getComponent(Box).setIndex2DMatrix([oldBox[2][0], oldBox[2][1]]);
@@ -128,6 +129,16 @@ export class Game extends Component {
     });
   }
 
+  private createTile(position: Vec2, size: number, index: [number, number], colorIndex: number): Node {
+    const node = instantiate(this.Box);
+    const nodeComponent = node.getComponent(Box);
+    node.setPosition(position.x, position.y);
+    nodeComponent.setSpriteFrame(this.boxSpriteFrames[colorIndex]);
+    nodeComponent.setContentSize(size, size);
+    nodeComponent.setIndex2DMatrix(index);
+    return node;
+  }
+
   /**
    * Инициализация игрового поля
    * 1. Установка рандомного цвета тайтла.
@@ -136,39 +147,36 @@ export class Game extends Component {
    */
   private initGameField(layout: Layout) {
     const uiTransportLayout = layout.getComponent(UITransform);
-    const cellSize = uiTransportLayout.contentSize.width / this.GameBoardSize - this.BoxGap;
+    const cellSize = uiTransportLayout.contentSize.width / this.gameBoardSize - this.BoxGap;
     const layoutBoundingBox = uiTransportLayout.getBoundingBox();
 
     const startIndex = this.gameBoard.length ? this.gameBoard.length : 0;
 
     const zeroXPostion = layoutBoundingBox.x + cellSize * 0.5;
     const zeroYPosition = layoutBoundingBox.y + cellSize * 0.5;
-    const gap = (layoutBoundingBox.width - this.GameBoardSize * cellSize) / (this.GameBoardSize - 1);
+    const gap = (layoutBoundingBox.width - this.gameBoardSize * cellSize) / (this.gameBoardSize - 1);
 
-    for (let i = startIndex, k = 0; i < startIndex + this.GameBoardSize * 2; i++) {
+    const rowsLength = this.gameBoard.length + this.gameBoardSize;
+    const colLength = this.gameBoardSize
+
+    for (let i = startIndex; i < rowsLength; i++) {
       this.gameBoard.push([]);
-      for (let j = 0; j < this.GameBoardSize; j++) {
+      for (let j = 0; j < colLength; j++) {
         let x = zeroXPostion + j * (cellSize + gap);
-        let y = zeroYPosition + i * (cellSize + gap);
+        let y = (zeroYPosition + i * (cellSize + gap) + (i >= this.gameBoardSize ? BOARDS_GAP : 0)) * -1;
 
-        const node = instantiate(this.Box);
-        const nodeComponent = node.getComponent(Box);
         const colorIndex = Math.floor(Math.random() * BOX_COLOR_TYPE_COUNT);
-        node.setPosition(x, y * -1);
-        nodeComponent.setSpriteFrame(this.boxSpriteFrames[colorIndex]);
-        nodeComponent.setContentSize(cellSize, cellSize);
-        nodeComponent.setIndex2DMatrix([i, j]);
+        const node = this.createTile(new Vec2(x, y), cellSize, [i, j], colorIndex)
 
-        this.gameBoard[i].push([node, [node.position.x, node.position.y], [i, j], colorIndex, true]);
+        const tile: GameBoardTile = [node, [node.position.x, node.position.y], [i, j], colorIndex, true]
+
+        this.gameBoardMap.set([i, j], tile);
+        this.gameBoard[i].push(tile);
+
         setTimeout(() => {
           layout.node.addChild(node);
-        }, 500 * i)
+        }, 100 * i)
       }
-      // if (k < this.GameBoardSize) {
-      //   k++;
-      // } else {
-      //   k = 0;
-      // }
     }
   }
 

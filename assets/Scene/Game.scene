@@ -2254,7 +2254,7 @@
         "__id__": 57
       }
     ],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 60
@@ -4782,7 +4782,7 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "GameBoardSize": 8,
+    "gameBoardSize": 8,
     "BoxGap": 10,
     "Box": {
       "__uuid__": "9f6b52a8-7828-4c62-881f-7505713eef15",

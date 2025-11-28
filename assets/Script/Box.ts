@@ -1,24 +1,19 @@
 import { _decorator, Component, Sprite, SpriteFrame, UITransform, Input, director, Animation, animation, Vec2, AnimationState, AnimationClip } from "cc";
-import { Game, type GameBoard, colorMap } from "./Game";
+import { Game, type GameBoard, type GameBoardTile, colorMap } from "./Game";
 
 import { BoxAnimation } from "./BoxAnimation";
 
-const { ccclass, property } = _decorator;
+import { getCopyArrayByVerticalBoundary, getDenormalizedIndex, getNormalizedIndex, getSiblingItem, type IndexInMatrix } from './utils/helpers'
 
-type Position = [number, number];
+const { ccclass } = _decorator;
 
-const DIRECTIONS = {
-  top: [-1, 0],
-  bottom: [1, 0],
-  left: [0, -1],
-  right: [0, 1],
-};
 
 @ccclass("Box")
 export class Box extends Component {
   public uiTransport: UITransform = null;
   private gameBoard: GameBoard = null;
-  private originIndex: Position = [0, 0];
+  private gameBoardMap: Map<GameBoardTile[0], GameBoardTile> = new Map();
+  private originIndex: IndexInMatrix = [0, 0];
   private gameBoardSize: number = 0;
   public boxAnimation: Animation = null;
 
@@ -29,6 +24,7 @@ export class Box extends Component {
 
     this.uiTransport = this.node.getComponent(UITransform);
     this.gameBoard = director.getScene().getChildByName("Canvas").getComponent(Game).gameBoard;
+    this.gameBoardMap = director.getScene().getChildByName("Canvas").getComponent(Game).gameBoardMap;
     this.gameBoardSize = this.gameBoard[0].length;
 
     const boxAnimation = this.node.getComponent(BoxAnimation);
@@ -73,7 +69,7 @@ export class Box extends Component {
     this.node.getComponent(UITransform).setContentSize(width, height);
   }
 
-  public setIndex2DMatrix(originIndex: Position) {
+  public setIndex2DMatrix(originIndex: IndexInMatrix) {
     this.originIndex = originIndex;
   }
 
@@ -122,8 +118,8 @@ export class Box extends Component {
       }
     });
 
-    const destroyedTitle = getSiblingTitle(copyBoard, getNormalizedIndex(this.originIndex, this.gameBoardSize));
-    if (destroyedTitle === null) {
+    const destroyedTile = getSiblingItem(copyBoard, getNormalizedIndex(this.originIndex, this.gameBoardSize));
+    if (destroyedTile === null) {
       console.log("Нет соседей");
       return;
     }
@@ -132,8 +128,8 @@ export class Box extends Component {
     /**
      * Поиск удаляемого тайтла по копии
      */
-    for (let i = 0; i < destroyedTitle.length; i++) {
-      for (let j = 0; j < destroyedTitle[i].length; j++) {
+    for (let i = 0; i < destroyedTile.length; i++) {
+      for (let j = 0; j < destroyedTile[i].length; j++) {
         if (copyBoard[i][j] === null) {
           const boxDenormalizedIndex = getDenormalizedIndex([i, j], this.gameBoardSize); // Индексы тайтла в оригинальном игровок поле
           const _this = this;
@@ -167,72 +163,9 @@ export class Box extends Component {
     callback();
   }
 
-  private deleteNode([rIndex, cIndex]: Position) {
+  private deleteNode([rIndex, cIndex]: IndexInMatrix) {
     this.gameBoard[rIndex][cIndex][0].destroy();
     this.gameBoard[rIndex][cIndex][4] = false;
     // this.gameBoard[rIndex][cIndex] = null
   }
-}
-
-function getSiblingTitle<T>(board: Array<Array<T>>, position: Position): Array<Array<T>> | null {
-  const [rIndex, cIndex] = position;
-  const startedTitle = board[rIndex][cIndex];
-  const siblings = getSiblingTitleByPosition(board, position, startedTitle);
-  if (!siblings.length) {
-    return null;
-  }
-  // markTitle(board, [rIndex, cIndex])
-  while (siblings.length) {
-    const [rIndex, cIndex] = siblings.shift();
-    markTitle(board, [rIndex, cIndex]); // new line
-    const newSiblings = getSiblingTitleByPosition(board, [rIndex, cIndex], startedTitle);
-    siblings.push(...newSiblings);
-  }
-  return board;
-}
-
-function getSiblingTitleByPosition<T>(board: Array<Array<T>>, position: Position, targetTitle: T): Array<Position> {
-  const siblings: Array<Position> = [];
-  const [rIndex, cIndex] = position;
-
-  for (let direction in DIRECTIONS) {
-    const newRowIndex = rIndex + DIRECTIONS[direction][0];
-    const newColumnIndex = cIndex + DIRECTIONS[direction][1];
-    const siblingTitle = isValidSibling(board, newRowIndex, newColumnIndex) ? board[newRowIndex][newColumnIndex] : null;
-
-    if (siblingTitle !== null && siblingTitle === targetTitle) {
-      siblings.push([newRowIndex, newColumnIndex]);
-      // markTitle(board, [newRowIndex, newColumnIndex])
-    }
-  }
-
-  return siblings;
-}
-
-function markTitle(board: Array<Array<unknown>>, [rIndex, cIndex]: Position): void {
-  board[rIndex][cIndex] = null;
-}
-
-function isValidSibling(board: Array<Array<unknown>>, row: number, col: number): boolean {
-  return row >= 0 && row < board.length && col >= 0 && col < board[0].length;
-}
-
-function getCopyArrayByVerticalBoundary<T>(originBoard: Array<Array<T>>, startIndex: number, callback: (value: T) => any): Array<Array<number>> {
-  const result = [];
-  const arrLength = originBoard[0].length;
-  for (let i = 0; i < arrLength; i++) {
-    result.push([]);
-    for (let j = 0; j < arrLength; j++) {
-      result[i].push(callback(originBoard[i + startIndex][j]));
-    }
-  }
-  return result;
-}
-
-function getNormalizedIndex(index: Position, arrayBoundaryLength: number): Position {
-  return index[0] >= arrayBoundaryLength ? [index[0] - arrayBoundaryLength, index[1]] : index;
-}
-
-function getDenormalizedIndex(index: Position, arrayBoundaryLength: number): Position {
-  return index[0] <= arrayBoundaryLength ? [index[0] + arrayBoundaryLength, index[1]] : index;
 }
