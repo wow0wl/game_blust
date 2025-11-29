@@ -12,7 +12,7 @@ const { ccclass } = _decorator;
 export class Box extends Component {
   public uiTransport: UITransform = null;
   private gameBoard: GameBoard = null;
-  private gameBoardMap: Map<GameBoardTile[0], GameBoardTile> = new Map();
+  private gameBoardMap: Map<[number, number], GameBoardTile> = new Map();
   private originIndex: IndexInMatrix = [0, 0];
   private gameBoardSize: number = 0;
   public boxAnimation: Animation = null;

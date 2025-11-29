@@ -1161,7 +1161,7 @@
         "__id__": 46
       }
     ],
-    "_active": true,
+    "_active": false,
     "_components": [
       {
         "__id__": 49
@@ -2584,7 +2584,7 @@
     "_originalWidth": 67.96372504191434,
     "_originalHeight": 84.5,
     "_alignMode": 2,
-    "_lockFlags": 45,
+    "_lockFlags": 63,
     "_id": "4cJXyKGs1ArLWZP7zE241P"
   },
   {
@@ -2600,7 +2600,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 600,
-      "height": 600
+      "height": 539.6199999999999
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",

@@ -41,7 +41,7 @@ export class Game extends Component {
       this.initGameField(this.BoxesLayout);
       this.initGameField(this.BoxesLayout);
 
-      this.BoxesLayout.node.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y + layoutBoundingBox.height + this.BoxGap + BOARDS_GAP)
+      // this.BoxesLayout.node.setPosition(layoutBoundingBox.center.x, layoutBoundingBox.center.y + layoutBoundingBox.height + this.BoxGap + BOARDS_GAP)
 
       for (let i = 0; i < this.gameBoard.length; i++) {
         for (let j = 0; j < this.gameBoard[0].length; j++) {
@@ -71,12 +71,13 @@ export class Game extends Component {
         if (!this.gameBoard[i][j][4]) {
           while (true) {
             if (this.gameBoard[k] && this.gameBoard[k][j][4]) {
-              let oldBox = this.gameBoardMap.get([i, j]);
-              let newBox = this.gameBoardMap.get([k, j]);
+              let oldBox = this.gameBoard[i][j];
+              let newBox = this.gameBoard[k][j];
               this.gameBoard[i][j] = null;
-              this.gameBoard[k][j] = null
 
               this.gameBoard[i][j] = [...newBox];
+
+              this.gameBoard[k][j][4] = false;
 
 
               this.gameBoard[i][j][0].getComponent(Box).setPosition(oldBox[1][0], oldBox[1][1]);
@@ -96,6 +97,35 @@ export class Game extends Component {
             if (k < 0) {
               break;
             }
+          }
+        }
+
+        /**
+      * Заполнение пустых клетов сверху-вниз
+      */
+        if (i === 0) {
+          let h = i;
+          while (!this.gameBoard[h][j][4]) {
+            const uiTransportLayout = this.BoxesLayout.getComponent(UITransform);
+            const layoutBoundingBox = uiTransportLayout.getBoundingBox();
+            const cellSize = uiTransportLayout.contentSize.width / this.gameBoardSize - this.BoxGap;
+
+            const zeroXPostion = layoutBoundingBox.x + cellSize * 0.5;
+            const zeroYPosition = layoutBoundingBox.y - layoutBoundingBox.height - BOARDS_GAP - this.BoxGap + cellSize * 0.5;
+            const gap = (layoutBoundingBox.width - this.gameBoardSize * cellSize) / (this.gameBoardSize - 1);
+
+            let x = zeroXPostion + j * (cellSize + gap);
+            let y = (zeroYPosition + h * (cellSize + gap) + (h >= this.gameBoardSize ? BOARDS_GAP : 0)) * -1;
+
+            const colorIndex = Math.floor(Math.random() * BOX_COLOR_TYPE_COUNT);
+            const node = this.createTile(new Vec2(x, y), cellSize, [h, j], colorIndex)
+            const tile: GameBoardTile = [node, [node.position.x, node.position.y], [h, j], colorIndex, true]
+            this.gameBoard[h][j] = tile
+
+            this.BoxesLayout.node.addChild(node);
+
+            h++;
+
           }
         }
       }
@@ -153,7 +183,7 @@ export class Game extends Component {
     const startIndex = this.gameBoard.length ? this.gameBoard.length : 0;
 
     const zeroXPostion = layoutBoundingBox.x + cellSize * 0.5;
-    const zeroYPosition = layoutBoundingBox.y + cellSize * 0.5;
+    const zeroYPosition = layoutBoundingBox.y - layoutBoundingBox.height - BOARDS_GAP - this.BoxGap + cellSize * 0.5;
     const gap = (layoutBoundingBox.width - this.gameBoardSize * cellSize) / (this.gameBoardSize - 1);
 
     const rowsLength = this.gameBoard.length + this.gameBoardSize;
